@@ -4,3 +4,4 @@ video-data
 garbage-dataset
 **/__pycache__
 *.h5
+*.keras
