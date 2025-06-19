@@ -5,6 +5,9 @@ from tensorflow.keras import layers, models
 IMG_SIZE = (224, 224)
 BATCH_SIZE = 32
 DATASET_DIR = "data1"
+INITIAL_EPOCHS = 10
+FINE_TUNE_EPOCHS = 10
+FROZEN_LAYERS = 30
 
 
 def train():
@@ -13,18 +16,20 @@ def train():
         DATASET_DIR,
         validation_split=0.2,
         subset="training",
-        seed=123,
+        seed=42,
         image_size=IMG_SIZE,
         batch_size=BATCH_SIZE,
+        shuffle=True
     )
 
     val_ds = tf.keras.preprocessing.image_dataset_from_directory(
         DATASET_DIR,
         validation_split=0.2,
         subset="validation",
-        seed=123,
+        seed=42,
         image_size=IMG_SIZE,
         batch_size=BATCH_SIZE,
+        shuffle=True
     )
 
     AUTOTUNE = tf.data.AUTOTUNE
@@ -37,7 +42,9 @@ def train():
             layers.RandomFlip("horizontal"),
             layers.RandomRotation(0.1),
             layers.RandomZoom(0.1),
-            layers.RandomBrightness(0.1),
+            layers.RandomBrightness(0.3),
+            layers.RandomContrast(0.2),
+            layers.RandomTranslation(0.2, 0.2)
         ]
     )
 
@@ -61,15 +68,16 @@ def train():
                   metrics=["accuracy"])
 
     # === Train Initial Model ===
-    initial_epochs = 5
-    history = model.fit(train_ds, validation_data=val_ds,
-                        epochs=initial_epochs)
+    early_stop_callback = tf.keras.callbacks.EarlyStopping(
+        monitor="val_loss", patience=3, restore_best_weights=True)
+    print(f"starting initial training at {dt.datetime.now()}...")
+    model.fit(train_ds, validation_data=val_ds,
+              epochs=INITIAL_EPOCHS, callbacks=[early_stop_callback])
 
-    # === Fine-Tune Some Layers ===
+    # === Fine-Tune the later layers ===
+    print(f"starting fine tuning at {dt.datetime.now()}...")
     base_model.trainable = True
-    fine_tune_at = 100  # freeze first 100 layers
-
-    for layer in base_model.layers[:fine_tune_at]:
+    for layer in base_model.layers[:FROZEN_LAYERS]:
         layer.trainable = False
 
     model.compile(
@@ -78,20 +86,11 @@ def train():
         metrics=["accuracy"],
     )
 
-    fine_tune_epochs = 5
-    total_epochs = initial_epochs + fine_tune_epochs
+    model.fit(train_ds, validation_data=val_ds, epochs=FINE_TUNE_EPOCHS)
 
-    model.fit(train_ds, validation_data=val_ds, epochs=total_epochs)
-
-    model_filename = f"models/mobile_net_v2_{dt.datetime.now()}"
+    model_filename = f"models/mobile_net_v2_{dt.datetime.now().strftime('%Y-%m-%d_%H:%M:%S.%f')}"
     model.save(model_filename + ".keras")
-
-    converter = tf.lite.TFLiteConverter.from_keras_model(model)
-    converter.optimizations = [tf.lite.Optimize.DEFAULT]
-
-    tflite_model = converter.convert()
-    with open(model_filename + ".tflite", "wb") as f:
-        f.write(tflite_model)
+    print(f"model saved to {model_filename}")
 
 
 if __name__ == "__main__":
