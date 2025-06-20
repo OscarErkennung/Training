@@ -35,6 +35,7 @@ print(
 train_output_dir = os.path.join("data/train", path.split("/", 1)[1])
 val_output_dir = os.path.join("data/val", path.split("/", 1)[1])
 
+os.makedirs("data", exist_ok=True)
 os.makedirs(train_output_dir, exist_ok=True)
 os.makedirs(val_output_dir, exist_ok=True)
 
