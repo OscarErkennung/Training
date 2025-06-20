@@ -17,12 +17,14 @@ train_dataset = tf.keras.utils.image_dataset_from_directory(
     shuffle=True,
     batch_size=BATCH_SIZE,
     image_size=IMG_SIZE,
+    label_mode="categorical"
 )
 validation_dataset = tf.keras.utils.image_dataset_from_directory(
     os.path.join(DATA_PATH, "val"),
     shuffle=True,
     batch_size=BATCH_SIZE,
     image_size=IMG_SIZE,
+    label_mode="categorical"
 )
 
 
@@ -57,7 +59,7 @@ x = tf.keras.applications.mobilenet_v2.preprocess_input(x)
 x = base_model(x, training=False)
 x = tf.keras.layers.GlobalAveragePooling2D()(x)
 x = tf.keras.layers.Dropout(0.2)(x)
-outputs = tf.keras.layers.Dense(1, activation="sigmoid")(x)
+outputs = tf.keras.layers.Dense(4, activation="softmax")(x)
 model = tf.keras.Model(inputs, outputs)
 
 
@@ -68,8 +70,8 @@ print(f"starting initial training ({dt.datetime.now()})")
 base_learning_rate = 0.0001
 model.compile(
     optimizer=tf.keras.optimizers.Adam(learning_rate=base_learning_rate),
-    loss=tf.keras.losses.BinaryCrossentropy(),
-    metrics=[tf.keras.metrics.BinaryAccuracy(threshold=0.5, name="accuracy")],
+    loss=tf.keras.losses.CategoricalCrossentropy(),
+    metrics=[tf.keras.metrics.CategoricalAccuracy(name="accuracy")],
 )
 
 history = model.fit(train_dataset, epochs=INITIAL_EPOCHS,
@@ -86,10 +88,10 @@ for layer in base_model.layers[:FINE_TUNING_FROZEN_LAYERS]:
     layer.trainable = False
 
 model.compile(
-    loss=tf.keras.losses.BinaryCrossentropy(),
+    loss=tf.keras.losses.CategoricalCrossentropy(),
     optimizer=tf.keras.optimizers.RMSprop(
         learning_rate=base_learning_rate / 10),
-    metrics=[tf.keras.metrics.BinaryAccuracy(threshold=0.5, name="accuracy")],
+    metrics=[tf.keras.metrics.CategoricalAccuracy(name="accuracy")],
 )
 
 history = model.fit(train_dataset, epochs=FINE_TUNING_EPOCHS,
