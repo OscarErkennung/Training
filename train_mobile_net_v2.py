@@ -1,4 +1,3 @@
-from collections import Counter
 import os
 import tensorflow as tf
 import datetime as dt

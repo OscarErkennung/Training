@@ -8,5 +8,5 @@ converter = tf.lite.TFLiteConverter.from_keras_model(model)
 converter.optimizations = [tf.lite.Optimize.DEFAULT]
 
 tflite_model = converter.convert()
-with open(model_filename[:-len(".keras")] + ".tflite", "wb") as f:
+with open(model_filename[:-len(".keras")] + "_quantized.tflite", "wb") as f:
     f.write(tflite_model)
